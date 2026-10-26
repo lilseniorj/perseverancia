@@ -3,7 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createTerrain, heightAt } from "./terrain.js";
 import { createRover, placeOnTerrain, WHEEL_RADIUS, DEFAULT_CONTACTS } from "./rover.js";
 import { createSampler, MAX_SAMPLES } from "./sampling.js";
-import { loadPerseverance, deployMast } from "./model.js";
+import { loadPerseverance, deployMast, articulateSuspension } from "./model.js";
 import { createNasaArm } from "./nasa-arm.js";
 import { createTracks, createDust } from "./effects.js";
 import { createMissionControl } from "./mission-control.js";
@@ -64,6 +64,7 @@ rover.mastCam.updateProjectionMatrix();
 // Cuando llega el modelo oficial de la NASA, lo ponemos en su lugar dentro del mismo grupo,
 // así la conducción, la inclinación y la cámara siguen funcionando igual.
 let cameraHotspots = null; // se crean cuando llega el modelo con sus cámaras
+let suspension = null; // rocker-bogie del modelo de la NASA
 loadPerseverance()
   .then(({ root, model, animations, cameras, wheels }) => {
     for (const child of rover.group.children) {
@@ -77,11 +78,13 @@ loadPerseverance()
     if (cameras.Mastcam_Z_cams) placeMastCam(cameras.Mastcam_Z_cams);
     cameraHotspots = createCameraHotspots({ rover, cameraParts: cameras, onPick: (key) => photoViewer.open(key) });
     if (wheels) {
-      // Desde ahora giran y se apoyan las llantas reales del modelo.
+      // Desde ahora giran, se apoyan y suben/bajan con la suspensión las llantas reales del modelo.
+      suspension = articulateSuspension(model, root, wheels);
+      const rest = wheels.map((w) => w.userData.rest ?? w.position);
       rover.wheels = wheels;
-      rover.contacts = wheels.map((w) => [w.position.x, w.position.z]);
-      REAR_WHEELS[0].set(wheels[2].position.x, 0, wheels[2].position.z);
-      REAR_WHEELS[1].set(wheels[5].position.x, 0, wheels[5].position.z);
+      rover.contacts = rest.map((p) => [p.x, p.z]);
+      REAR_WHEELS[0].set(rest[2].x, 0, rest[2].z);
+      REAR_WHEELS[1].set(rest[5].x, 0, rest[5].z);
     }
     console.log("Cámaras del Perseverance (modelo NASA):");
     console.table(Object.keys(cameras).map((name) => ({ pieza: name })));
@@ -166,6 +169,21 @@ function hitsRock(x, z) {
   return terrain.obstacles.some((o) => Math.hypot(x - o.x, z - o.z) < o.r + ROVER_RADIUS);
 }
 
+// El cuerpo se apoya en el plano promedio de las 6 llantas; lo que cada llanta queda por
+// encima o por debajo de ese plano lo absorbe la suspensión rocker-bogie.
+const wheelOffsets = [0, 0, 0, 0, 0, 0];
+const probe = new THREE.Vector3();
+function articulateToTerrain() {
+  rover.group.updateMatrixWorld();
+  rover.wheels.forEach((w, i) => {
+    const rest = w.userData.rest;
+    rover.group.localToWorld(probe.set(rest.x, 0, rest.z));
+    probe.y = heightAt(probe.x, probe.z);
+    wheelOffsets[i] = rover.group.worldToLocal(probe).y;
+  });
+  suspension.articulate(wheelOffsets);
+}
+
 function drive(dt) {
   // Con el brazo desplegado el rover no se mueve, igual que el real.
   const canDrive = !sampler.busy;
@@ -197,6 +215,7 @@ function drive(dt) {
 
   const prevPos = rover.group.position.clone();
   placeOnTerrain(rover.group, heightAt, state.x, state.z, state.heading, rover.contacts);
+  if (suspension) articulateToTerrain();
 
   if (moved !== 0 || omega !== 0) {
     rover.group.updateMatrixWorld();
