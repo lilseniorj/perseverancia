@@ -4,6 +4,7 @@ import { createTerrain, heightAt } from "./terrain.js";
 import { createRover, placeOnTerrain, WHEEL_RADIUS, DEFAULT_CONTACTS } from "./rover.js";
 import { createSampler, MAX_SAMPLES } from "./sampling.js";
 import { loadPerseverance, deployMast } from "./model.js";
+import { createNasaArm } from "./nasa-arm.js";
 import { createTracks, createDust } from "./effects.js";
 import { createMissionControl } from "./mission-control.js";
 import { createPhotoViewer, createCameraHotspots } from "./camera-photos.js";
@@ -71,6 +72,8 @@ loadPerseverance()
     rover.group.add(root);
     rover.cameraParts = cameras;
     deployMast(model, animations);
+    const nasaArm = createNasaArm(model, animations);
+    if (nasaArm) rover.armDriver = nasaArm; // las muestras ahora mueven el brazo real
     if (cameras.Mastcam_Z_cams) placeMastCam(cameras.Mastcam_Z_cams);
     cameraHotspots = createCameraHotspots({ rover, cameraParts: cameras, onPick: (key) => photoViewer.open(key) });
     if (wheels) {

@@ -266,7 +266,18 @@ export function createRover() {
   mastCam.position.set(0.45, BODY_Y + 1.43, 0.97);
   group.add(mastCam);
 
-  return { group, wheels, mastCam, arm };
+  // Interfaz común del brazo: la toma de muestras la usa igual con este brazo simple
+  // o con el brazo real del modelo de la NASA (nasa-arm.js).
+  const armDriver = {
+    stowed: STOWED_POSE,
+    solve: (targetWorld) => armPoseFor(group.worldToLocal(targetWorld.clone())),
+    apply: (pose) => applyArmPose(arm, pose),
+    lerp: lerpPose,
+    spinDrill: (dt) => (arm.drill.rotation.y += dt * 40),
+    resetDrill: () => {},
+  };
+
+  return { group, wheels, mastCam, arm, armDriver };
 }
 
 // Puntos donde cada llanta toca el suelo, en coordenadas del rover: [x, z].
