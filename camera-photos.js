@@ -192,7 +192,8 @@ export function createCameraHotspots({ rover, cameraParts, onPick }) {
       }
       for (const d of dots) {
         d.button.hidden = d.behind;
-        d.button.style.transform = `translate(${d.screen.x}px, ${d.screen.y}px)`;
+        // "translate" (no "transform"): así el agrandado al pasar el mouse no mueve el punto.
+        d.button.style.translate = `${d.screen.x}px ${d.screen.y}px`;
       }
     },
   };
