@@ -4,7 +4,7 @@ import { createTerrain, heightAt } from "./terrain.js";
 import { createRover, placeOnTerrain, WHEEL_RADIUS, DEFAULT_CONTACTS } from "./rover.js";
 import { createSampler, MAX_SAMPLES } from "./sampling.js";
 import { loadPerseverance, deployMast } from "./model.js";
-import { createTracks } from "./effects.js";
+import { createTracks, createDust } from "./effects.js";
 import { createMissionControl } from "./mission-control.js";
 import { createPhotoViewer, createCameraHotspots } from "./camera-photos.js";
 
@@ -97,6 +97,7 @@ function placeMastCam(mastcamPart) {
 const REAR_WHEELS = [new THREE.Vector3(-1.0, 0, -0.75), new THREE.Vector3(1.0, 0, -0.75)];
 rover.contacts = DEFAULT_CONTACTS;
 const tracks = createTracks(scene, heightAt);
+const dust = createDust(scene, heightAt, 0xd2a27c);
 
 // El Perseverance real va a ~4 cm/s; aquí lo aceleramos para que sea divertido.
 const MAX_SPEED = 3; // m/s
@@ -196,7 +197,14 @@ function drive(dt) {
 
   if (moved !== 0 || omega !== 0) {
     rover.group.updateMatrixWorld();
-    tracks.update(REAR_WHEELS.map((p) => rover.group.localToWorld(p.clone())), state.heading);
+    const rearWheels = REAR_WHEELS.map((p) => rover.group.localToWorld(p.clone()));
+    tracks.update(rearWheels, state.heading);
+    if (moved !== 0) {
+      // El polvo sale hacia atrás respecto de hacia dónde avanza (también al retroceder).
+      const s = Math.sign(moved);
+      const back = new THREE.Vector3(-Math.sin(state.heading) * s, 0, -Math.cos(state.heading) * s);
+      dust.spawn(rearWheels, Math.abs(state.speed), back, dt);
+    }
   }
 
   // Cada lado gira a distinta velocidad al doblar; así el rover puede girar en su lugar.
@@ -281,6 +289,7 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
   drive(dt);
+  dust.update(dt); // cada cuadro, para que el polvo termine de asentarse aunque el rover pare
   sampler.update(dt, Math.abs(state.speed) < 0.05);
   controls.update();
   cameraHotspots?.update(camera, !state.mastView && !photoViewer.isOpen);
