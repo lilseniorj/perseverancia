@@ -1,0 +1,423 @@
+<title>Mapa de Open MCT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #eef0ec;
+    --surface: #ffffff;
+    --ink: #17202a;
+    --muted: #5a6570;
+    --line: #c9d0d4;
+    --accent: #1d63a3;
+    --accent-soft: #dbe8f4;
+    --rust: #b0502a;
+    --rust-soft: #f4e2d8;
+    --code-bg: #e4e8e4;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0e1318;
+      --surface: #161e26;
+      --ink: #e2e7ec;
+      --muted: #94a1ad;
+      --line: #2c3843;
+      --accent: #72b4ec;
+      --accent-soft: #17324a;
+      --rust: #e38a5d;
+      --rust-soft: #3a2218;
+      --code-bg: #121a21;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0e1318;
+    --surface: #161e26;
+    --ink: #e2e7ec;
+    --muted: #94a1ad;
+    --line: #2c3843;
+    --accent: #72b4ec;
+    --accent-soft: #17324a;
+    --rust: #e38a5d;
+    --rust-soft: #3a2218;
+    --code-bg: #121a21;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 40px 64px;
+  }
+  .prose { max-width: 66ch; }
+
+  h1, h2, h3 {
+    font-family: var(--display);
+    font-stretch: 112%;
+    text-wrap: balance;
+    margin: 0;
+  }
+  code, .ref { font-family: var(--mono); }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .lede {
+    font-family: var(--display);
+    font-stretch: 105%;
+    font-weight: 600;
+    font-size: clamp(24px, 3.4vw, 36px);
+    line-height: 1.25;
+    max-width: 30ch;
+    margin: 0 0 18px;
+  }
+  .lede em { font-style: normal; color: var(--accent); }
+  .sub { color: var(--muted); max-width: 62ch; margin: 0; }
+
+  section { margin-top: 56px; }
+  h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .section-note { color: var(--muted); margin: 0 0 20px; max-width: 66ch; }
+
+  /* ---------- Diagrama ---------- */
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+    padding: 12px;
+  }
+  .diagram svg { display: block; width: 100%; min-width: 920px; height: auto; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .legend li { display: flex; align-items: center; gap: 8px; }
+  .swatch { width: 28px; height: 0; border-top: 2px solid var(--accent); }
+  .swatch.dashed { border-top: 2px dashed var(--muted); }
+
+  svg .col-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; fill: var(--muted); }
+  svg .box rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+  svg .box.data rect { fill: var(--accent-soft); stroke: var(--accent); }
+  svg .b-title { font-family: var(--body); font-size: 14px; font-weight: 600; fill: var(--ink); }
+  svg .b-sub { font-family: var(--body); font-size: 11.5px; fill: var(--muted); }
+  svg .b-ref { font-family: var(--mono); font-size: 10px; fill: var(--accent); }
+  svg .box:not(.data) .b-ref { fill: var(--muted); }
+  svg .wire { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 5 4; }
+  svg .wire.data { stroke: var(--accent); stroke-width: 2; stroke-dasharray: none; }
+  svg .w-label { font-family: var(--body); font-size: 11px; fill: var(--muted); }
+  svg .w-label.data { fill: var(--accent); font-weight: 600; }
+
+  /* ---------- Piezas ---------- */
+  .pieces {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .piece { background: var(--surface); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 6px; grid-column: span 2; }
+  .piece:nth-child(n + 4) { grid-column: span 3; }
+  @media (max-width: 760px) {
+    .pieces { grid-template-columns: 1fr; }
+    .piece, .piece:nth-child(n + 4) { grid-column: auto; }
+  }
+  .piece h3 { font-size: 17px; font-weight: 700; }
+  .piece p { margin: 0; font-size: 14.5px; }
+  .piece .ref { font-size: 12px; color: var(--accent); overflow-wrap: anywhere; margin-top: auto; padding-top: 6px; }
+  .piece .analogy { color: var(--muted); font-size: 13.5px; }
+
+  /* ---------- Percy ---------- */
+  .percy { border-top: 3px solid var(--rust); padding-top: 24px; }
+  .percy h2 { color: var(--rust); }
+  .mapping { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  .mapping th, .mapping td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .mapping tr:last-child td { border-bottom: 0; }
+  .mapping th { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .mapping code { font-size: 12.5px; }
+  .mapping td:first-child code { color: var(--accent); }
+  .mapping td:nth-child(2) code { color: var(--rust); }
+
+  .steps { margin: 20px 0 0; padding-left: 22px; max-width: 66ch; }
+  .steps li { margin-bottom: 6px; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 12px 0 0;
+  }
+  .code-caption { font-size: 13px; color: var(--muted); margin: 24px 0 0; max-width: 66ch; }
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: var(--rust-soft);
+    color: var(--rust);
+  }
+
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  footer ul { margin: 6px 0 0; padding-left: 18px; }
+  footer code { color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Mapa del repo · nasa/openmct · commit e09bfaf</p>
+    <p class="lede">Open MCT es un tablero vacío que se llena con <em>enchufes</em>: cada plugin conecta algo —una fuente de datos, una gráfica, una tabla— y el núcleo solo se encarga de juntar a quien pide un dato con quien lo tiene.</p>
+    <p class="sub">Es el software que usa la NASA para ver la telemetría de sus misiones. Aquí está su esqueleto en lenguaje simple, con el archivo y la línea exacta de cada pieza, para entender cómo viajaría un dato de nuestro Percy hasta una gráfica.</p>
+  </header>
+
+  <section aria-labelledby="mapa">
+    <h2 id="mapa">El mapa: de la fuente a la gráfica</h2>
+    <p class="section-note">Tres columnas: quién tiene el dato (un plugin fuente), el núcleo que hace de central telefónica, y quién lo muestra (el plugin de gráficas). El ejemplo es el generador de ondas que trae el propio repo.</p>
+
+    <div class="diagram">
+      <svg viewBox="0 0 1100 800" role="img" aria-labelledby="diag-title diag-desc">
+        <title id="diag-title">Diagrama de arquitectura y viaje de un dato en Open MCT</title>
+        <desc id="diag-desc">El generador se instala como plugin y registra un proveedor de telemetría en el núcleo. La gráfica pide datos al núcleo, que busca el proveedor que los sirve; el dato nace en un Web Worker, vuelve por el núcleo, entra a la serie de la gráfica y se dibuja con WebGL.</desc>
+        <defs>
+          <marker id="arrow-reg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" style="fill: var(--muted)"/>
+          </marker>
+          <marker id="arrow-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" style="fill: var(--accent)"/>
+          </marker>
+        </defs>
+
+        <text class="col-label" x="170" y="24" text-anchor="middle">FUENTE · plugin generador</text>
+        <text class="col-label" x="930" y="24" text-anchor="middle">PANTALLA · plugin de gráficas</text>
+
+        <!-- Cables de instalación / registro -->
+        <path class="wire" d="M550 118 V154" marker-end="url(#arrow-reg)"/>
+        <path class="wire" d="M320 191 H400" marker-end="url(#arrow-reg)"/>
+        <text class="w-label" x="360" y="183" text-anchor="middle">install</text>
+        <path class="wire" d="M700 191 H780" marker-end="url(#arrow-reg)"/>
+        <text class="w-label" x="740" y="183" text-anchor="middle">instala</text>
+        <path class="wire" d="M170 228 V264" marker-end="url(#arrow-reg)"/>
+        <text class="w-label" x="180" y="250">el plugin corre</text>
+        <path class="wire" d="M320 301 H400" marker-end="url(#arrow-reg)"/>
+        <text class="w-label" x="360" y="293" text-anchor="middle">registra</text>
+        <path class="wire" d="M550 338 V374" marker-end="url(#arrow-reg)"/>
+        <text class="w-label" x="560" y="360">consulta la lista</text>
+
+        <!-- Viaje del dato -->
+        <path class="wire data" d="M860 338 L700 404" marker-end="url(#arrow-data)"/>
+        <text class="w-label data" x="800" y="384">pide</text>
+        <path class="wire data" d="M400 411 H320" marker-end="url(#arrow-data)"/>
+        <text class="w-label data" x="360" y="403" text-anchor="middle">¿quién sirve?</text>
+        <path class="wire data" d="M170 448 V484" marker-end="url(#arrow-data)"/>
+        <text class="w-label data" x="180" y="470">le pide al worker</text>
+        <path class="wire data" d="M320 521 H400" marker-end="url(#arrow-data)"/>
+        <text class="w-label data" x="360" y="513" text-anchor="middle">el dato</text>
+        <path class="wire data" d="M700 521 H780" marker-end="url(#arrow-data)"/>
+        <text class="w-label data" x="740" y="513" text-anchor="middle">llega</text>
+        <path class="wire data" d="M930 558 V594" marker-end="url(#arrow-data)"/>
+        <path class="wire data" d="M930 668 V704" marker-end="url(#arrow-data)"/>
+
+        <!-- Núcleo -->
+        <g class="box"><rect x="400" y="44" width="300" height="74" rx="8"/>
+          <text class="b-title" x="414" y="68">Se crea openmct</text>
+          <text class="b-sub" x="414" y="86">Un único objeto central con todas las APIs</text>
+          <text class="b-ref" x="414" y="106">openmct.js:35</text></g>
+        <g class="box"><rect x="400" y="154" width="300" height="74" rx="8"/>
+          <text class="b-title" x="414" y="178">install(plugin)</text>
+          <text class="b-sub" x="414" y="196">Solo ejecuta el plugin: plugin(openmct)</text>
+          <text class="b-ref" x="414" y="216">src/MCT.js:435</text></g>
+        <g class="box"><rect x="400" y="264" width="300" height="74" rx="8"/>
+          <text class="b-title" x="414" y="288">Lista de proveedores</text>
+          <text class="b-sub" x="414" y="306">addProvider guarda quién sirve qué</text>
+          <text class="b-ref" x="414" y="326">src/api/telemetry/TelemetryAPI.js:167</text></g>
+        <g class="box data"><rect x="400" y="374" width="300" height="74" rx="8"/>
+          <text class="b-title" x="414" y="398">request / subscribe</text>
+          <text class="b-sub" x="414" y="416">Busca el primer proveedor que acepta</text>
+          <text class="b-ref" x="414" y="436">src/api/telemetry/TelemetryAPI.js:470 · 529</text></g>
+        <g class="box data"><rect x="400" y="484" width="300" height="74" rx="8"/>
+          <text class="b-title" x="414" y="508">Entrega el dato</text>
+          <text class="b-sub" x="414" y="526">Devuelve lo que respondió el proveedor</text>
+          <text class="b-ref" x="414" y="546">src/api/telemetry/TelemetryAPI.js:495</text></g>
+
+        <!-- Fuente -->
+        <g class="box"><rect x="20" y="154" width="300" height="74" rx="8"/>
+          <text class="b-title" x="34" y="178">index.html instala el generador</text>
+          <text class="b-sub" x="34" y="196">openmct.install(…Generator())</text>
+          <text class="b-ref" x="34" y="216">index.html:104</text></g>
+        <g class="box"><rect x="20" y="264" width="300" height="74" rx="8"/>
+          <text class="b-title" x="34" y="288">Registra su proveedor</text>
+          <text class="b-sub" x="34" y="306">openmct.telemetry.addProvider(…)</text>
+          <text class="b-ref" x="34" y="326">example/generator/plugin.js:166</text></g>
+        <g class="box data"><rect x="20" y="374" width="300" height="74" rx="8"/>
+          <text class="b-title" x="34" y="398">«¿Tipo generator? Lo sirvo yo»</text>
+          <text class="b-sub" x="34" y="416">supportsRequest / supportsSubscribe</text>
+          <text class="b-ref" x="34" y="436">example/generator/GeneratorProvider.js:42</text></g>
+        <g class="box data"><rect x="20" y="484" width="300" height="74" rx="8"/>
+          <text class="b-title" x="34" y="508">Nace el dato</text>
+          <text class="b-sub" x="34" y="526">{ utc, sin, cos… } en un Web Worker</text>
+          <text class="b-ref" x="34" y="546">example/generator/generatorWorker.js:73</text></g>
+
+        <!-- Pantalla -->
+        <g class="box"><rect x="780" y="154" width="300" height="74" rx="8"/>
+          <text class="b-title" x="794" y="178">La gráfica se registra</text>
+          <text class="b-sub" x="794" y="196">Se ofrece como vista para estos datos</text>
+          <text class="b-ref" x="794" y="216">src/plugins/plot/plugin.js:80</text></g>
+        <g class="box data"><rect x="780" y="264" width="300" height="74" rx="8"/>
+          <text class="b-title" x="794" y="288">La gráfica pide datos</text>
+          <text class="b-sub" x="794" y="306">Se suscribe y además pide el historial</text>
+          <text class="b-ref" x="794" y="326">src/plugins/plot/configuration/PlotSeries.js:213</text></g>
+        <g class="box data"><rect x="780" y="484" width="300" height="74" rx="8"/>
+          <text class="b-title" x="794" y="508">add(): el punto entra</text>
+          <text class="b-sub" x="794" y="526">Lo ordena por tiempo y avisa «add»</text>
+          <text class="b-ref" x="794" y="546">src/plugins/plot/configuration/PlotSeries.js:436</text></g>
+        <g class="box data"><rect x="780" y="594" width="300" height="74" rx="8"/>
+          <text class="b-title" x="794" y="618">Programa el dibujo</text>
+          <text class="b-sub" x="794" y="636">Junta los cambios y redibuja</text>
+          <text class="b-ref" x="794" y="656">src/plugins/plot/chart/MctChart.vue:758</text></g>
+        <g class="box data"><rect x="780" y="704" width="300" height="74" rx="8"/>
+          <text class="b-title" x="794" y="728">Dibuja la línea</text>
+          <text class="b-sub" x="794" y="746">WebGL traza los puntos como una línea</text>
+          <text class="b-ref" x="794" y="766">src/plugins/plot/draw/DrawWebGL.js:251</text></g>
+      </svg>
+    </div>
+    <ul class="legend">
+      <li><span class="swatch dashed"></span>Instalación y registro: pasa una vez, al arrancar</li>
+      <li><span class="swatch"></span>Viaje de un dato: pasa cada vez que llega telemetría</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="piezas">
+    <h2 id="piezas">Las 5 piezas clave</h2>
+    <p class="section-note">Si entiendes estas cinco, entiendes Open MCT. Todo lo demás son plugins que las usan.</p>
+    <div class="pieces">
+      <article class="piece">
+        <h3>El núcleo: <code>openmct</code></h3>
+        <p>Un solo objeto que guarda las herramientas (telemetría, objetos, tiempo, vistas…). Por sí solo no muestra ningún dato.</p>
+        <p class="analogy">Como la central de una red eléctrica: reparte, no produce.</p>
+        <span class="ref">src/MCT.js:77</span>
+      </article>
+      <article class="piece">
+        <h3>Plugin</h3>
+        <p>Una función que recibe <code>openmct</code> y se enchufa a él. Las gráficas, las tablas y el generador de ejemplo son plugins.</p>
+        <p class="analogy">Instalar uno es literalmente llamarlo: <code>plugin(this)</code>.</p>
+        <span class="ref">src/MCT.js:435</span>
+      </article>
+      <article class="piece">
+        <h3>Proveedor de telemetría</h3>
+        <p>Quien tiene los datos. Responde dos preguntas: «¿puedes servir este objeto?» y «dame sus datos», ya sea el historial (<code>request</code>) o en vivo (<code>subscribe</code>).</p>
+        <span class="ref">src/api/telemetry/TelemetryAPI.js:167</span>
+      </article>
+      <article class="piece">
+        <h3>Metadatos</h3>
+        <p>La ficha de cada dato: nombre, unidad, formato, y si es el tiempo (<code>domain</code>) o el valor que se grafica (<code>range</code>).</p>
+        <span class="ref">src/api/telemetry/TelemetryMetadataManager.js:71</span>
+      </article>
+      <article class="piece">
+        <h3>Vista</h3>
+        <p>Lo que ve la persona. Se registra para ciertos objetos y, al abrirse, pide los datos al núcleo y dibuja cada punto que llega.</p>
+        <span class="ref">src/ui/registries/ViewRegistry.js:77</span>
+      </article>
+    </div>
+  </section>
+
+  <section class="percy" aria-labelledby="percy">
+    <h2 id="percy">Cómo conectamos Percy</h2>
+    <p class="section-note">Ya lo hicimos dentro del juego: el panel «Control de misión» (tecla T) copia este mismo patrón en pequeño, en <code>mission-control.js</code>. Cada pieza de Open MCT tiene su equivalente:</p>
+
+    <div class="table-wrap">
+      <table class="mapping">
+        <thead>
+          <tr><th>En Open MCT</th><th>En nuestro juego</th><th>Qué hace</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Metadatos <code>telemetry.values</code></td><td><code>TELEMETRY</code></td><td>Ficha de cada dato: nombre, unidad y proveedor (distancia, altura, inclinación, tiempo de luz).</td></tr>
+          <tr><td><code>telemetry.addProvider</code></td><td><code>createTelemetryAPI()</code></td><td>Guarda los proveedores y busca el primero que acepta cada dato.</td></tr>
+          <tr><td><code>supportsRequest</code> + <code>request</code></td><td><code>nasaWaypointsProvider()</code></td><td>Descarga <code>M20_waypoints.json</code> de la NASA y devuelve el historial de toda la misión.</td></tr>
+          <tr><td><code>supportsSubscribe</code> + <code>subscribe</code></td><td><code>ephemerisProvider()</code></td><td>Calcula el tiempo de luz cada segundo y devuelve una función para dejar de escuchar.</td></tr>
+          <tr><td>Vista Plot (WebGL)</td><td><code>drawChart()</code> (canvas)</td><td>Dibuja la gráfica de toda la misión con el último punto marcado.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="code-caption">Y si un día quisiéramos ver a Percy en el Open MCT de verdad, el plugin se vería así. <span class="tag">Boceto: no se instaló ni se probó en el repo</span></p>
+<pre><code>// percy-plugin.js — un plugin = una función que recibe openmct
+export default function PercyPlugin() {
+  return function install(openmct) {
+    openmct.types.addType('percy.telemetry', { name: 'Dato de Percy' });
+
+    // Un objeto con su ficha (metadatos): tiempo = domain, valor = range
+    openmct.objects.addProvider('percy', {
+      get: (identifier) => Promise.resolve({
+        identifier,
+        name: 'Distancia recorrida',
+        type: 'percy.telemetry',
+        telemetry: {
+          values: [
+            { key: 'utc', name: 'Tiempo', format: 'utc', hints: { domain: 1 } },
+            { key: 'value', name: 'Distancia', unit: 'km', hints: { range: 1 } }
+          ]
+        }
+      })
+    });
+
+    // El proveedor: «¿es de Percy? lo sirvo yo»
+    openmct.telemetry.addProvider({
+      supportsRequest: (obj) => obj.type === 'percy.telemetry',
+      request: async () => {
+        const res = await fetch('https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints.json');
+        const { features } = await res.json();
+        return features
+          .map((f) => f.properties)
+          .filter((p) => p.dist_total_m > 0)
+          .map((p) => ({ utc: dateFromSol(p.sol).getTime(), value: p.dist_total_m / 1000 }));
+      }
+    });
+  };
+}</code></pre>
+
+    <ol class="steps">
+      <li>La clave del tiempo se llama <code>utc</code> porque debe coincidir con el sistema de tiempo activo de Open MCT (API.md:530).</li>
+      <li>Los sols de la NASA se convierten a fecha con <code>dateFromSol()</code>, la misma función de <code>ephemeris.js</code> del juego.</li>
+      <li>Como el valor tiene la pista <code>range</code>, Open MCT ofrece la gráfica automáticamente, y el dato recorre el mismo camino del mapa: <code>request</code> → <code>PlotSeries.add</code> → WebGL.</li>
+      <li>Para el tiempo de luz en vivo se agregaría <code>supportsSubscribe</code> + <code>subscribe</code>, que debe devolver la función para desuscribirse (API.md:539).</li>
+    </ol>
+  </section>
+
+  <footer>
+    Verificado contra el código: las 20 referencias de este mapa se leyeron en el repo clonado (commit e09bfaf, sin modificarlo), y además se abrieron 3 al azar con su contexto:
+    <ul>
+      <li><code>example/generator/plugin.js:166</code> → <code>openmct.telemetry.addProvider(new GeneratorProvider(…))</code></li>
+      <li><code>src/ui/registries/ViewRegistry.js:77</code> → <code>addProvider(provider) {</code></li>
+      <li><code>src/plugins/plot/configuration/PlotSeries.js:436</code> → <code>add(newData, sorted = false) {</code></li>
+    </ul>
+  </footer>
+</div>

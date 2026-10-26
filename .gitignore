@@ -1,0 +1,10 @@
+# Capturas de pruebas automáticas
+.playwright-mcp/
+check-output/
+
+# Editor y sistema
+.vscode/
+.DS_Store
+
+# Dependencias (el proyecto no tiene, por si algún día se agregan)
+node_modules/

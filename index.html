@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perseverance 3D</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Sin ícono: evita el error 404 de favicon.ico en la consola -->
+  <link rel="icon" href="data:," />
+</head>
+<body>
+  <div id="info">
+    <strong>Perseverance Rover &mdash; Simulación 3D</strong><br />
+    W / S o &uarr; / &darr;: avanzar y retroceder &middot; A / D o &larr; / &rarr;: girar<br />
+    Arrastra el mouse para mover la cámara &middot; Rueda para zoom &middot; C: cámara del mástil &middot; E: tomar muestra &middot; T: control de misión &middot; Clic en los puntos azules: fotos reales
+  </div>
+
+  <div id="hud">
+    <div><span>Velocidad</span><b id="hud-speed">0.0 m/s</b></div>
+    <div><span>Distancia</span><b id="hud-distance">0.0 m</b></div>
+    <div><span>Rumbo</span><b id="hud-heading">0°</b></div>
+    <div><span>Cámara</span><b id="hud-camera">Órbita</b></div>
+    <div><span>Muestras</span><b id="hud-samples">0 / 43</b></div>
+  </div>
+  <div id="hud-alert" hidden>OBSTÁCULO DETECTADO</div>
+  <div id="hud-hint" hidden></div>
+  <div id="toast" hidden></div>
+  <ul id="sample-log" hidden></ul>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
