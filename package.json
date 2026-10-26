@@ -5,6 +5,7 @@
   "description": "Simulación 3D del rover Perseverance (clase de Claude Code)",
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "check": "node scripts/check.mjs"
+    "check": "node scripts/check.mjs",
+    "fotos": "node scripts/fotos.mjs"
   }
 }

@@ -2,6 +2,11 @@
 .playwright-mcp/
 check-output/
 
+# Renovación de fotos (archivos de trabajo de npm run fotos)
+fotos-candidatas.json
+fotos-candidatas.html
+fotos-elegidas.json
+
 # Editor y sistema
 .vscode/
 .DS_Store
