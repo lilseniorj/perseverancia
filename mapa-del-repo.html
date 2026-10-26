@@ -368,37 +368,27 @@
       </table>
     </div>
 
-    <p class="code-caption">Y si un día quisiéramos ver a Percy en el Open MCT de verdad, el plugin se vería así. <span class="tag">Boceto: no se instaló ni se probó en el repo</span></p>
-<pre><code>// percy-plugin.js — un plugin = una función que recibe openmct
+    <p class="code-caption">Para ver a Percy en el Open MCT de verdad ya existe el plugin: <code>openmct-percy-plugin.js</code> en nuestro repo. Se instala con <code>openmct.install(PercyPlugin())</code>. <span class="tag">Probado con un openmct simulado en npm run check · aún no dentro de Open MCT real</span></p>
+<pre><code>// openmct-percy-plugin.js (resumido) — un plugin = una función que recibe openmct
 export default function PercyPlugin() {
   return function install(openmct) {
     openmct.types.addType('percy.telemetry', { name: 'Dato de Percy' });
 
-    // Un objeto con su ficha (metadatos): tiempo = domain, valor = range
-    openmct.objects.addProvider('percy', {
-      get: (identifier) => Promise.resolve({
-        identifier,
-        name: 'Distancia recorrida',
-        type: 'percy.telemetry',
-        telemetry: {
-          values: [
-            { key: 'utc', name: 'Tiempo', format: 'utc', hints: { domain: 1 } },
-            { key: 'value', name: 'Distancia', unit: 'km', hints: { range: 1 } }
-          ]
-        }
-      })
-    });
+    // Carpeta «Percy» con 4 datos; cada uno trae su ficha: tiempo = domain, valor = range
+    openmct.objects.addRoot({ namespace: 'percy', key: 'mission' });
+    openmct.objects.addProvider('percy', { get: (id) => Promise.resolve(domainObject(id.key)) });
 
-    // El proveedor: «¿es de Percy? lo sirvo yo»
     openmct.telemetry.addProvider({
       supportsRequest: (obj) => obj.type === 'percy.telemetry',
-      request: async () => {
-        const res = await fetch('https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints.json');
-        const { features } = await res.json();
-        return features
-          .map((f) => f.properties)
-          .filter((p) => p.dist_total_m > 0)
-          .map((p) => ({ utc: dateFromSol(p.sol).getTime(), value: p.dist_total_m / 1000 }));
+      supportsSubscribe: (obj) => obj.identifier.key === 'lightTime',
+
+      // Historial de toda la misión, ordenado y recortado a lo que pide el time conductor
+      request: async (obj, { start, end }) => { /* waypoints de la NASA o cálculo de órbitas */ },
+
+      // En vivo: tiempo de luz cada segundo; devuelve cómo dejar de escuchar
+      subscribe: (obj, callback) => {
+        const id = setInterval(() => callback({ utc: Date.now(), value: lightTimeMinutes() }), 1000);
+        return () => clearInterval(id);
       }
     });
   };
@@ -408,7 +398,8 @@ export default function PercyPlugin() {
       <li>La clave del tiempo se llama <code>utc</code> porque debe coincidir con el sistema de tiempo activo de Open MCT (API.md:530).</li>
       <li>Los sols de la NASA se convierten a fecha con <code>dateFromSol()</code>, la misma función de <code>ephemeris.js</code> del juego.</li>
       <li>Como el valor tiene la pista <code>range</code>, Open MCT ofrece la gráfica automáticamente, y el dato recorre el mismo camino del mapa: <code>request</code> → <code>PlotSeries.add</code> → WebGL.</li>
-      <li>Para el tiempo de luz en vivo se agregaría <code>supportsSubscribe</code> + <code>subscribe</code>, que debe devolver la función para desuscribirse (API.md:539).</li>
+      <li>El tiempo de luz en vivo usa <code>supportsSubscribe</code> + <code>subscribe</code>, que devuelve la función para desuscribirse (API.md:539).</li>
+      <li>La prueba simulada (<code>scripts/test-percy-plugin.mjs</code>) confirma con datos reales: 552 puntos de distancia, 706 de altura e inclinación, todos ordenados y dentro de los límites pedidos, y que el dato en vivo se detiene al desuscribirse.</li>
     </ol>
   </section>
 

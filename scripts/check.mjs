@@ -1,6 +1,6 @@
 // npm run check — sin dependencias: usa Node (http, WebSocket) y el Chrome ya instalado.
-// 1) revisa la sintaxis de los módulos  2) abre el juego en Chrome sin ventana
-// 3) confirma que los 4 datos del control de misión cargaron con números reales
+// 1) revisa la sintaxis de los módulos  2) prueba el plugin de Percy para Open MCT (contrato)
+// 3) abre el juego en Chrome sin ventana y confirma que los 4 datos del control de misión cargaron con números reales
 // 4) prueba que la tecla T oculta y muestra el panel
 // 5) hace clic en cada cámara, espera la foto real y guarda la captura en check-output/
 // 6) falla si la consola tiene errores
@@ -9,10 +9,26 @@ import { spawn, execFileSync } from "node:child_process";
 import { readFile, readdir, mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, extname, resolve, relative } from "node:path";
+import { existsSync } from "node:fs";
+import { testPercyPlugin } from "./test-percy-plugin.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const OUT_DIR = join(ROOT, "check-output"); // capturas con la foto abierta
-const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+
+// Chrome o Chromium: CHROME_PATH si está definido, si no las rutas habituales de macOS y Linux.
+function findChrome() {
+  const candidates = [
+    process.env.CHROME_PATH,
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+  ].filter(Boolean);
+  return candidates.find((p) => existsSync(p));
+}
+const CHROME = findChrome();
 const TIMEOUT_MS = 45000;
 
 // Rangos creíbles: si un número cae fuera, no es un dato real de Percy.
@@ -43,7 +59,21 @@ for (const f of jsFiles) {
   }
 }
 
-// ---------- 2. Servidor + Chrome ----------
+// ---------- 2. Plugin de Percy para Open MCT (contrato, sin navegador) ----------
+console.log("\n2. Plugin de Percy para Open MCT (contrato con un openmct simulado)");
+try {
+  await testPercyPlugin({ ok, fail });
+} catch (err) {
+  fail(`el plugin lanzó un error: ${err.message}`);
+}
+
+if (!CHROME) {
+  fail("no se encontró Chrome ni Chromium: instala uno o define CHROME_PATH con su ruta");
+  console.log(`\n✗ check falló (${failures.length})\n`);
+  process.exit(1);
+}
+
+// ---------- 3. Servidor + Chrome ----------
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".glb": "model/gltf-binary" };
 const server = createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, "http://x").pathname);
@@ -136,7 +166,7 @@ try {
   await cdp("Page.navigate", { url: appUrl });
 
   // ---------- 3. Los 4 datos ----------
-  console.log("\n2. Control de misión: los 4 datos de Percy");
+  console.log("\n3. Control de misión: los 4 datos de Percy");
   const readCards = () =>
     evaluate(`[...document.querySelectorAll('[data-telemetry]')].map(c => ({
       key: c.dataset.telemetry, status: c.dataset.status, value: Number(c.dataset.value),
@@ -158,7 +188,7 @@ try {
   }
 
   // ---------- 4. Tecla T ----------
-  console.log("\n3. La tecla T oculta y muestra el panel");
+  console.log("\n4. La tecla T oculta y muestra el panel");
   const pressT = async () => {
     for (const type of ["keyDown", "keyUp"]) {
       await cdp("Input.dispatchKeyEvent", { type, code: "KeyT", key: "t", windowsVirtualKeyCode: 84 });
@@ -175,7 +205,7 @@ try {
   else fail(`la tecla T no alterna el panel (antes=${before}, 1ª=${afterFirst}, 2ª=${afterSecond})`);
 
   // ---------- 5. Cámaras: clic → foto real ----------
-  console.log("\n4. Cámaras de Percy: clic en cada punto abre una foto real");
+  console.log("\n5. Cámaras de Percy: clic en cada punto abre una foto real");
   await mkdir(OUT_DIR, { recursive: true });
   const viewerState = () =>
     evaluate(`(() => { const v = document.getElementById('photo-viewer'); const img = v?.querySelector('img');
@@ -246,7 +276,7 @@ try {
   }
 
   // ---------- 6. Consola ----------
-  console.log("\n5. Consola del navegador");
+  console.log("\n6. Consola del navegador");
   await sleep(2000); // margen para errores tardíos (modelo 3D, timers)
   if (consoleErrors.length === 0) ok("sin errores");
   else consoleErrors.forEach((e) => fail(`error en consola: ${e}`));
