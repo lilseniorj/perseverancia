@@ -71,7 +71,7 @@ Hoy vamos a construir, en vivo y en 60 minutos, una simulación 3D del rover Per
 ## Cómo ejecutarlo
 
 ```bash
-npm start          # = python3 -m http.server 8080 → abrir http://localhost:8080
+npm start          # servidor local sin caché → abrir http://localhost:8080
 npm run check      # chequeo completo (necesita internet y Chrome o Chromium)
 npm run fotos      # renovar las fotos de las cámaras (ver Pedido 6)
 ```
