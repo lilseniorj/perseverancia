@@ -71,31 +71,48 @@ Hoy vamos a construir, en vivo y en 60 minutos, una simulación 3D del rover Per
 ## Cómo ejecutarlo
 
 ```bash
-python3 -m http.server 8080
+npm start          # = python3 -m http.server 8080 → abrir http://localhost:8080
+npm run check      # chequeo completo (necesita internet y Chrome o Chromium)
+npm run fotos      # renovar las fotos de las cámaras (ver Pedido 6)
 ```
 
-Abrir **http://localhost:8080**. Hace falta servirlo con un servidor (no abrir el `.html` directo) porque usa módulos de JavaScript.
+Hace falta servirlo con un servidor (no abrir el `.html` directo) porque usa módulos de JavaScript. El proyecto no tiene dependencias: no hay que correr `npm install`.
+
+Repositorio: `git@github.com:lilseniorj/perseverancia.git` (rama `main`).
 
 | Tecla | Acción |
 |---|---|
 | W / S o ↑ / ↓ | Avanzar / retroceder |
 | A / D o ← / → | Girar (también en su lugar) |
-| C | Alternar cámara órbita / Mastcam-Z |
+| C | Alternar cámara órbita / Mastcam-Z (la cámara real del mástil) |
+| E | Tomar una muestra (con una roca u objeto al alcance) |
+| T | Mostrar / ocultar el control de misión |
+| Clic en un punto azul | Foto real de esa cámara (← → más fotos, Esc para volver) |
 | Mouse | Orbitar y hacer zoom (vista órbita) |
 
 ## Estructura del proyecto
 
 - `index.html` — página, import map de Three.js, instrucciones y telemetría
 - `style.css` — estilos de la interfaz
-- `main.js` — escena, luces, conducción, colisiones, cámaras y telemetría
-- `terrain.js` — terreno con ruido, cráteres y rocas (semilla fija: siempre sale el mismo)
-- `rover.js` — modelo del Perseverance y `placeOnTerrain()`
+- `main.js` — escena, luces, conducción, colisiones, cámaras, polvo, suspensión y telemetría
+- `terrain.js` — terreno, cráteres, rocas con tipo, meteoritos y restos (semilla fija)
+- `rover.js` — rover simple (respaldo si el modelo no carga), su brazo y `placeOnTerrain()`
+- `model.js` — modelo de la NASA: carga, llantas separadas, mástil desplegado, suspensión rocker-bogie
+- `nasa-arm.js` — cinemática inversa del brazo real de la NASA
+- `sampling.js` — toma de muestras (funciona con cualquiera de los dos brazos)
+- `effects.js` — huellas y polvo
+- `mission-control.js` + `ephemeris.js` — control de misión y tiempo de luz Tierra → Marte
+- `camera-photos.js` + `photos.js` — puntos sobre las cámaras y visor de fotos reales
+- `openmct-percy-plugin.js` — plugin para ver la telemetría de Percy en Open MCT
+- `mapa-del-repo.html` — explicación de Open MCT (también publicada como artefacto)
+- `scripts/check.mjs`, `scripts/test-percy-plugin.mjs`, `scripts/fotos.mjs` — chequeo, prueba del plugin y renovación de fotos
+- `public/models/perseverance.glb` — modelo 3D oficial de la NASA
 
 ## Ideas para seguir después de la clase
 
 - Agregar el helicóptero Ingenuity volando cerca del rover
-- Huellas de las ruedas sobre la arena *(en curso, ver abajo)*
-- Usar el brazo para tomar una muestra de roca
+- ~~Huellas de las ruedas sobre la arena~~ *(hecho)*
+- ~~Usar el brazo para tomar una muestra de roca~~ *(hecho, con el brazo real de la NASA)*
 - Ciclo de día y noche marciano (un "sol" dura 24 h 39 min)
 - Texturas reales usando imágenes públicas de la NASA
 
@@ -122,7 +139,7 @@ El plan original de la clase (los 6 pasos) está completo. Como siguiente mejora
 ## Avance
 
 - [x] Paso 1: crear `effects.js` (huellas + polvo)
-- [x] Paso 2: huellas conectadas en `main.js`, hechas continuas (marca cada 0.15 m, hasta 4000 marcas). El **polvo** (`createDust`) está escrito pero todavía no se usa.
+- [x] Paso 2: huellas conectadas en `main.js`, hechas continuas (marca cada 0.15 m, hasta 4000 marcas). El **polvo** también está conectado (ver "Cierre de pendientes").
 - [x] Paso 3: las huellas se apoyan en el terreno con su inclinación (normal calculada con `heightAt`)
 - [x] Verificación en el navegador (huellas continuas detrás del modelo NASA)
 
@@ -185,14 +202,14 @@ Quedan guardadas en `rover.cameraParts` (nombre → objeto 3D) para usarlas al f
 
 ## Pendiente / notas
 
-- El mástil del modelo viene **plegado**, así que la cámara de la tecla C sigue en la posición del mástil del rover simple. Al final se puede mover a `Mastcam_Z_cams`.
+- ~~El mástil viene plegado~~ **Resuelto:** se despliega con su propia animación (ver "Cierre de pendientes").
 - ~~Las ruedas del modelo son un solo objeto~~ **Resuelto (física de llantas):**
   - `splitWheels()` en `model.js` separa `Wheels_objs` (3 mallas con las 6 llantas fundidas) en 6 llantas. Agrupa los triángulos por lado (signo de x) y por eje (k-means sobre z). Radio medido: 0.263 m, que coincide con los 52.5 cm de diámetro reales.
   - Cada llanta gira según la distancia recorrida, con distinta velocidad por lado al doblar.
   - `placeOnTerrain()` apoya el rover en sus **6 puntos de contacto reales**, con un plano por mínimos cuadrados que da la altura, el pitch y el roll.
   - Las huellas salen de la posición real de las llantas traseras.
-  - Pendiente: articular la suspensión rocker-bogie, que también viene fundida en una sola pieza (`suspension`).
-- El brazo del modelo no se anima: la muestra se toma igual, pero sin el movimiento del brazo. Se podría animar usando sus articulaciones (`arm_01_pivot`, `arm_02_pivot`).
+  - ~~Pendiente: articular la suspensión rocker-bogie~~ **Resuelto** (ver "Cierre de pendientes").
+- ~~El brazo del modelo no se anima~~ **Resuelto** con cinemática inversa sobre `arm003`/`arm002`/`arm`/`arm004` (ver "Cierre de pendientes").
 
 ---
 
@@ -205,7 +222,7 @@ Quedan guardadas en `rover.cameraParts` (nombre → objeto 3D) para usarlas al f
   - Los **proveedores** se registran con `openmct.telemetry.addProvider(...)` (`src/api/telemetry/TelemetryAPI.js:167`) y dicen qué pueden servir con `supportsRequest`/`request` (historial, una Promise) y `supportsSubscribe`/`subscribe` (en vivo, devuelve cómo desuscribirse).
   - La gráfica (`src/plugins/plot/configuration/PlotSeries.js`) pide el historial y además se suscribe a lo que llega en vivo.
 - **Artefacto:** `mapa-del-repo.html`, publicado en https://claude.ai/artifact/UsHXB5f1ETpCczVTnUSF69. Es privado hasta que se comparta desde el menú Compartir.
-  - Contenido: una frase que lo explica, un diagrama de cajas y flechas con archivo:línea en cada caja, las 5 piezas clave y la sección "Cómo conectamos Percy" (tabla Open MCT ↔ `mission-control.js` y un boceto de plugin para Percy, sin probar).
+  - Contenido: una frase que lo explica, un diagrama de cajas y flechas con archivo:línea en cada caja, las 5 piezas clave y la sección "Cómo conectamos Percy" (tabla Open MCT ↔ `mission-control.js` y el plugin real `openmct-percy-plugin.js`, probado con un openmct simulado; versión 2 del artefacto).
   - Verificación: se leyeron en el código las 20 referencias citadas y se abrieron 3 al azar con su contexto (`example/generator/plugin.js:166`, `ViewRegistry.js:77`, `PlotSeries.js:436`); todas coinciden.
 
 # Pedido 5: control de misión dentro del juego
@@ -285,3 +302,32 @@ Cada dato muestra su valor, una gráfica de toda la misión (eje en sols) y una 
 - Espera a que la foto termine de revelarse y confirma que es una imagen real de `mars.nasa.gov/mars2020-raw-images/`.
 - Guarda la captura con la foto abierta en `check-output/foto-<cámara>.png`.
 - También prueba que → cambia de foto y que Esc cierra el visor.
+
+---
+
+# Cierre de pendientes y limpieza (25-oct-2026)
+
+Trabajo hecho sin supervisión, con un commit y un push por cada punto. Ningún commit se subió sin que `npm run check` pasara, salvo `9e1e4a8`, que se corrigió en `8a07a37`; está explicado abajo.
+
+| Pendiente | Qué se hizo | Cómo se comprobó |
+|---|---|---|
+| Mástil plegado y vista C | El modelo traía la animación `CylinderAction`, que levanta el mástil entre 0 y 5 s. Se congela en el segundo 7.5, con la Mastcam-Z a 1.97 m. La vista C sale de `Mastcam_Z_cams`. | Capturas de costado y desde la vista C |
+| Polvo | `createDust` conectado: sale de las ruedas traseras hacia atrás según el sentido de marcha y se asienta solo. | Captura en marcha atrás |
+| Brazo al tomar muestras | La animación incluida levanta el brazo en vez de bajarlo, así que no sirve. `nasa-arm.js` resuelve la cinemática inversa sobre las 4 articulaciones reales: los ejes se leen de sus animaciones y un descenso de gradiente con 3 poses iniciales deja la punta del taladro sobre la roca con el taladro vertical. `sampling.js` usa un `armDriver` común para el brazo simple y el de la NASA, y solo vuelve a buscar cuando el rover se mueve. | Captura de frente: brazo extendido sobre la roca y "Muestra #1" |
+| Suspensión rocker-bogie | `articulateSuspension()` corta la pieza `suspension` en rocker y bogie de cada lado. Los pivotes se midieron en una vista lateral con cuadrícula de 10 cm. Las llantas cuelgan de su pieza y, en cada cuadro, lo que cada una queda sobre o bajo el plano del cuerpo se reparte entre los dos ángulos por mínimos cuadrados (máximo ±0.35 rad). | Render de costado con colores por pieza, en reposo y articulada (delantera +15 cm, trasera −10 cm) |
+| Fotos fijas | `npm run fotos` baja las candidatas recientes con los mismos filtros, arma `fotos-candidatas.html` para mirarlas y `npm run fotos -- escribir` regenera `photos.js` con las elegidas en `fotos-elegidas.json`. La elección sigue siendo humana, como pedía el pedido 6. | Ciclo completo probado y `photos.js` original restaurado |
+| Plugin de Open MCT sin probar | Ahora es un archivo real, `openmct-percy-plugin.js`, con una prueba de contrato (`scripts/test-percy-plugin.mjs`) usando un openmct simulado. Es el paso 2 de `npm run check`. | 11 comprobaciones con datos reales. Sabotaje: con el orden invertido falla. **Aún no probado dentro de Open MCT real** (requeriría instalar sus dependencias). |
+| `check` dependía de Chrome en macOS | Busca `CHROME_PATH`, Chrome o Chromium en macOS y Linux, y avisa claro si no hay ninguno. Sigue necesitando internet para los datos reales. | — |
+
+## Bugs encontrados en el camino
+
+- **Puntos de cámara en la esquina:** al crearse aparecían un instante en (0, 0). Ahora nacen ocultos, y el chequeo espera dos lecturas iguales antes de hacer clic.
+- **El punto escapaba del mouse:** el agrandado con `scale` también multiplicaba el `transform: translate` que lo ubica, así que el punto se alejaba del cursor y el clic caía en el canvas. Se ubica con la propiedad `translate`.
+  - Esto causó el commit `9e1e4a8` con el chequeo fallando: un `grep` en la cadena de comandos dejó pasar el commit. Desde entonces se usa `if npm run check; then commit`.
+
+## Limpieza antes de compartir
+
+- **Borrado:** `.playwright-mcp/` (capturas y páginas de prueba) y `check-output/` (se vuelve a generar con `npm run check`).
+- **En `.gitignore`:** esas dos carpetas, `.vscode/` y los archivos de trabajo de `npm run fotos`.
+- **Servidores de prueba detenidos.**
+- **Pendiente del dueño:** compartir el artefacto de Open MCT desde su menú Compartir; hasta entonces es privado.
