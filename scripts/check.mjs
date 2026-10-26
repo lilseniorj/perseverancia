@@ -197,12 +197,19 @@ try {
   };
 
   // Los puntos aparecen cuando termina de cargar el modelo de la NASA.
-  let dots = [];
-  for (let t0 = Date.now(); Date.now() - t0 < 20000; await sleep(300)) {
-    dots = (await evaluate(`[...document.querySelectorAll('.cam-dot')].filter(d => !d.hidden).map(d => {
+  // Se esperan dos lecturas iguales seguidas: así no se hace clic en un punto que todavía se está ubicando.
+  const readDots = async () =>
+    (await evaluate(`[...document.querySelectorAll('.cam-dot')].filter(d => !d.hidden).map(d => {
       const r = d.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
       return { key: d.dataset.camera, x, y, onTop: document.elementFromPoint(x, y)?.closest('.cam-dot') === d }; })`)) ?? [];
-    if (dots.length === 4) break;
+  let dots = [];
+  for (let t0 = Date.now(); Date.now() - t0 < 20000; await sleep(300)) {
+    const a = await readDots();
+    await sleep(250);
+    const b = await readDots();
+    const stable = a.length === 4 && JSON.stringify(a) === JSON.stringify(b);
+    dots = b;
+    if (stable) break;
   }
   if (dots.length !== 4) fail(`se esperaban 4 puntos de cámara visibles y hay ${dots.length}`);
 

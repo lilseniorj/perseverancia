@@ -149,6 +149,7 @@ export function createCameraHotspots({ rover, cameraParts, onPick }) {
 
     const button = el("button", "cam-dot");
     button.type = "button";
+    button.hidden = true; // hasta el primer cuadro no tiene posición: aparecería en la esquina
     button.dataset.camera = key;
     button.setAttribute("aria-label", `${cam.name}: tomar una foto`);
     const tip = el("span", "cam-tip");
